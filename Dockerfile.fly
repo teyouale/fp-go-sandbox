@@ -1,0 +1,71 @@
+# ============================================================
+# Stage 1: Build the lightweight runner binary
+# ============================================================
+FROM golang:1.24-alpine AS runner-build
+
+WORKDIR /src
+COPY runner/go.mod runner/main.go ./
+RUN CGO_ENABLED=0 go build -ldflags="-s -w" -o /out/runner .
+
+# ============================================================
+# Stage 2: Final image — Go toolchain + fp-go cache + runner
+# ============================================================
+FROM golang:1.24-alpine
+
+# Security: create an unprivileged user for running user code
+RUN adduser -h /home/sandbox -D sandbox
+
+RUN apk add --no-cache ca-certificates
+
+# --- Pre-warm the fp-go module & build caches ---
+ENV GOCACHE=/home/sandbox/.cache/go-build \
+    GOMODCACHE=/home/sandbox/go/pkg/mod \
+    GOFLAGS=-mod=mod \
+    CGO_ENABLED=0
+
+USER sandbox
+WORKDIR /home/sandbox/playground
+
+# Fetch fp-go modules and warm the build cache
+RUN go mod init playground && \
+    go get github.com/IBM/fp-go/v2/either@latest && \
+    go get github.com/IBM/fp-go/v2/option@latest && \
+    go get github.com/IBM/fp-go/v2/io@latest && \
+    go get github.com/IBM/fp-go/v2/array@latest && \
+    go get github.com/IBM/fp-go/v2/function@latest && \
+    go get github.com/IBM/fp-go/v2/tuple@latest && \
+    go get github.com/IBM/fp-go/v2/monoid@latest && \
+    go get github.com/IBM/fp-go/v2/semigroup@latest && \
+    go get github.com/IBM/fp-go/v2/ord@latest && \
+    go get github.com/IBM/fp-go/v2/eq@latest && \
+    go get github.com/IBM/fp-go/either@latest && \
+    go get github.com/IBM/fp-go/option@latest && \
+    go get github.com/IBM/fp-go/array@latest && \
+    go get github.com/IBM/fp-go/function@latest && \
+    go get github.com/IBM/fp-go/string@latest && \
+    go get github.com/IBM/fp-go/number@latest && \
+    go get github.com/IBM/fp-go/number/integer@latest && \
+    go get github.com/IBM/fp-go/identity@latest && \
+    go get github.com/IBM/fp-go/ioeither@latest && \
+    go get github.com/IBM/fp-go/errors@latest && \
+    go get github.com/IBM/fp-go/ord@latest && \
+    printf 'package main\nimport (\n\t_ "fmt"\n\tE "github.com/IBM/fp-go/v2/either"\n\tO "github.com/IBM/fp-go/v2/option"\n\t_ "github.com/IBM/fp-go/v2/io"\n\t_ "github.com/IBM/fp-go/v2/array"\n\t_ "github.com/IBM/fp-go/v2/function"\n\t_ "github.com/IBM/fp-go/v2/tuple"\n\t_ "github.com/IBM/fp-go/v2/monoid"\n\t_ "github.com/IBM/fp-go/v2/semigroup"\n\t_ "github.com/IBM/fp-go/v2/ord"\n\t_ "github.com/IBM/fp-go/v2/eq"\n\t_ "github.com/IBM/fp-go/array"\n\t_ "github.com/IBM/fp-go/function"\n\t_ "github.com/IBM/fp-go/string"\n\t_ "github.com/IBM/fp-go/number"\n\t_ "github.com/IBM/fp-go/number/integer"\n\t_ "github.com/IBM/fp-go/identity"\n\t_ "github.com/IBM/fp-go/ioeither"\n\t_ "github.com/IBM/fp-go/errors"\n\t_ "github.com/IBM/fp-go/ord"\n)\nvar _ = E.Right[error](1)\nvar _ = O.Some(1)\nfunc main() {}\n' > warmup.go && \
+    go build -o /dev/null . && \
+    rm -f warmup.go
+
+# Lock down: no network fetches at runtime
+ENV GOPROXY=off GOFLAGS=-mod=mod
+
+# --- Copy the runner binary and samples ---
+USER root
+COPY --from=runner-build /out/runner /usr/local/bin/runner
+COPY --chown=sandbox:sandbox samples/ /home/sandbox/samples/
+
+# Expose HTTP port
+EXPOSE 1313
+
+# Run as the sandbox user
+USER sandbox
+WORKDIR /home/sandbox
+
+CMD ["runner"]
