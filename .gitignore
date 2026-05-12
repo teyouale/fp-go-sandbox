@@ -1,0 +1,11 @@
+# Docker volumes
+volumes/
+
+# Logs
+*.log
+
+# Environment files
+.env.local
+.env.production
+
+# Made with Bob
