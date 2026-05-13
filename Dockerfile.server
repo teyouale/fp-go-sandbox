@@ -1,0 +1,18 @@
+# Build codapi server from source — there is no official Docker image.
+FROM golang:1.24-alpine AS build
+ARG CODAPI_VERSION=v0.14.0
+RUN apk add --no-cache git
+RUN git clone --depth 1 --branch ${CODAPI_VERSION} \
+        https://github.com/nalgeon/codapi /src
+WORKDIR /src
+RUN CGO_ENABLED=0 go build -ldflags="-s -w" -o /out/codapi ./cmd
+
+FROM alpine:3.20
+RUN apk add --no-cache ca-certificates docker-cli
+WORKDIR /codapi
+COPY --from=build /out/codapi /usr/local/bin/codapi
+# codapi reads codapi.json + sandboxes/ from its working directory.
+COPY codapi.json ./codapi.json
+COPY sandboxes ./sandboxes
+EXPOSE 1313
+CMD ["codapi", "-port", "1313"]

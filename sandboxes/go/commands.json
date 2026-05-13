@@ -1,0 +1,15 @@
+{
+    "run": {
+        "engine": "docker",
+        "entry": "main.go",
+        "steps": [
+            {
+                "box": "go",
+                "command": [
+                    "sh", "-c",
+                    "cp /sandbox/main.go /home/sandbox/playground/main.go && cd /home/sandbox/playground && go run main.go"
+                ]
+            }
+        ]
+    }
+}
