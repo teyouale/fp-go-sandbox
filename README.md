@@ -1,6 +1,10 @@
 # fp-go Sandbox
 
-A lightweight code execution server for running [fp-go](https://github.com/IBM/fp-go) snippets interactively. Deployed on [Fly.io](https://fly.io/).
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+
+> **A sandbox environment for experimenting with [fp-go](https://github.com/IBM/fp-go), a functional programming library for Go.**
+
+A lightweight, open-source code execution server for running [fp-go](https://github.com/IBM/fp-go) snippets interactively. Deployed on [Fly.io](https://fly.io/).
 
 **Live:** https://fpgo-sandbox.fly.dev
 
@@ -58,3 +62,9 @@ curl https://fpgo-sandbox.fly.dev/health
 - [fp-go Repository](https://github.com/IBM/fp-go)
 - [Codapi (API inspiration)](https://github.com/nalgeon/codapi)
 - [Fly.io Documentation](https://fly.io/docs/)
+
+## 📄 License
+
+This project is licensed under the **Apache License 2.0** — see the [LICENSE](LICENSE) file for details.
+
+This is the same license used by IBM's [fp-go](https://github.com/IBM/fp-go) library.
